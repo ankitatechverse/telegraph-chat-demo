@@ -1,17 +1,3 @@
-Here’s the **full `README.md`** you can use for your Laravel 12 + Telegraph Telegram bot project, with **clear steps**, including:
-
-* creating a bot with `telegraph:new-bot`
-* setting the webhook with `telegraph:set-webhook`
-* adding `.env` config (APP_URL + TELEGRAM_BOT_TOKEN)
-* CSRF setup specific to Laravel 12 (`withMiddleware`)
-* ngrok local HTTPS testing
-* simple reply logic (hi → hello)
-* optional chat creation
-
-This is a **ready-to-use file** you can copy into your project.
-
----
-
 ```md
 # Laravel Telegram Bot (Simple Hello Bot)
 
