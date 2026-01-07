@@ -184,9 +184,17 @@ Confirm the webhook URL is set and no errors are shown.
 php artisan telegraph:set-webhook {bot_id}
 ```
 
+* You can inspect incoming webhook requests using **ngrok inspect**:
+
+  * Open `http://127.0.0.1:4040` in your browser.
+  * View request payloads, headers, and response status.
+  * Useful for debugging webhook issues and verifying Telegram calls.
+
 * The default Telegraph webhook route is:
 
 ```
 POST /telegraph/{token}/webhook
 ```
 
+* Use Telegraph command handlers
+* Add multiple keyword responses
