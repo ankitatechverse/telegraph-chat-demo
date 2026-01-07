@@ -1,46 +1,52 @@
-```md
-# Laravel Telegram Bot (Simple Hello Bot)
+# Laravel Telegram Bot (Hello Bot)
 
-This project shows how to build a **Telegram bot in Laravel 12** using the **defstudio/telegraph** package.
+## Overview
 
-The bot will:
-  * receive webhook updates from Telegram
-  * reply **hello** when a user sends **hi**
+This guide shows how to build a **simple Telegram bot using Laravel 12** with the **defstudio/telegraph** package.
 
-For local testing you’ll use **ngrok** to expose your local server over HTTPS.
+**Bot behavior**
+
+* Receives webhook updates from Telegram
+* Replies `hello` when a user sends `hi`
+
+**Local development**
+
+* Uses **ngrok** to expose your local server over HTTPS
 
 ---
 
-## Quickstart
+## Prerequisites
 
-### 1) Creating a new Telegram Bot
+* PHP 8.2+
+* Laravel 12
+* Composer
+* Telegram account
+* ngrok
 
-1. Open the Telegram app.
+---
+
+## 1. Create a Telegram Bot
+
+1. Open Telegram.
 2. Search for **@BotFather**.
-3. Send the command:
-```
+3. Send:
 
+```
 /newbot
-
-```
-4. BotFather will ask for a bot token. Paste your token when prompted.
-5. BotFather will show you a token like:
 ```
 
-123456789:ABCdefGhiJkl_MNOPqrstUVwxyZ
-
-````
-Save this — you’ll use it in your project.
+4. Complete the setup.
+5. Save the bot token provided by BotFather.
 
 ---
 
-## 2) Add the bot to Telegraph (Laravel project)
+## 2. Install Telegraph
 
-Install the Telegraph package:
+Install the package:
 
 ```bash
 composer require defstudio/telegraph
-````
+```
 
 Publish migrations and migrate:
 
@@ -57,9 +63,7 @@ php artisan vendor:publish --tag="telegraph-config"
 
 ---
 
-## 3) Registering a Bot with Telegraph
-
-Telegraph comes with an artisan wizard to create a bot record.
+## 3. Register the Bot in Telegraph
 
 Run:
 
@@ -67,70 +71,42 @@ Run:
 php artisan telegraph:new-bot
 ```
 
-You will be prompted like this:
+* Enter the bot token.
+* Optionally give the bot a name.
+* Skip chat and webhook setup for now.
 
-```
-Please, enter the bot token:
-> 123456789:ABCdefGhiJkl_MNOPqrstUVwxyZ
-
-Enter the bot name (optional):
-> TeleDemoChat
-
-Do you want to add a chat to this bot? (yes/no) [no]:
-> no
-
-Do you want to setup a webhook for this bot? (yes/no) [no]:
-> no
-
-New bot TeleDemoChat has been created
-```
-
-At the end you’ll see a **bot ID** (e.g., `1`).
-This is stored in your database (`telegraph_bots` table). You’ll use it later.
+Note the **bot ID** shown at the end.
 
 ---
 
-## 4) Local HTTPS (ngrok) for webhook
+## 4. Run Laravel and ngrok
 
-Telegram requires a secure HTTPS URL for webhooks.
-
-In one terminal start your Laravel app:
+Start Laravel:
 
 ```bash
 php artisan serve --port=8000
 ```
 
-In another terminal start ngrok:
+Start ngrok in another terminal:
 
 ```bash
 ngrok http 8000
 ```
 
-You’ll see something like:
-
-```
-Forwarding  https://abcd1234.ngrok.io -> http://localhost:8000
-```
-
-Copy the **HTTPS** URL. You’ll use it in `.env` and to register the webhook.
+Copy the HTTPS forwarding URL.
 
 ---
 
-## 5) Update `.env`: App URL and Telegram Bot Token
+## 5. Configure Environment Variables
 
-Open your project’s `.env` and add or update:
+Update `.env`:
 
 ```
-APP_URL=https://abcd1234.ngrok.io
-TELEGRAM_BOT_TOKEN=123456789:ABCdefGhiJkl_MNOPqrstUVwxyZ
+APP_URL=https://your-ngrok-url.ngrok.io
+TELEGRAM_BOT_TOKEN=your_bot_token
 ```
 
-Replace:
-
-* `https://abcd1234.ngrok.io` with **your ngrok HTTPS URL**
-* `123456789:ABCdef…` with **your real bot token**
-
-Then clear Laravel config:
+Clear caches:
 
 ```bash
 php artisan config:clear
@@ -139,172 +115,78 @@ php artisan route:clear
 
 ---
 
-## 6) CSRF Setup (Laravel 12)
+## 6. Exclude Webhook From CSRF Protection
 
-Laravel protects POST routes with CSRF by default. Telegram webhook POSTs do **not** include a CSRF token, so you must exclude the webhook route.
+Telegram webhook requests do not include CSRF tokens.
 
-Update **`config/app.php`** with:
+Update **`config/app.php`** to exclude the Telegraph webhook route from CSRF validation.
 
-```php
-use Illuminate\Routing\Middleware\ValidatePostSize;
-
-return [
-
-    // …
-
-    'withMiddleware' => function ($middleware) {
-        $middleware->validateCsrfTokens(
-            except: [
-                'telegraph/*/webhook', // exclude webhook from CSRF
-            ],
-        );
-    },
-
-    // …
-];
-```
-
-This ensures Laravel does not block Telegram’s webhook calls with a 419 error.
+This prevents 419 errors when Telegram sends updates.
 
 ---
 
-## 7) Setting a Webhook
+## 7. Register the Webhook
 
-Now register the webhook for your bot:
+Register the webhook for your bot:
 
 ```bash
 php artisan telegraph:set-webhook {bot_id}
 ```
 
-Replace `{bot_id}` with the ID shown when you created the bot (e.g., `1`).
-
-This command tells Telegram to send updates to:
-
-```
-https://abcd1234.ngrok.io/telegraph/123456789:ABCdefGhiJkl_MNOPqrstUVwxyZ/webhook
-```
-
-The `{token}` part is your bot token (Telegraph’s default webhook route).
+Replace `{bot_id}` with your actual bot ID.
 
 ---
 
-## 8) Adding a Chat (optional)
+## 8. Webhook Logic
 
-If you want to pre-add a chat to your bot (for record keeping), run:
-
-```bash
-php artisan telegraph:new-chat {bot_id}
-```
-
-Follow the prompts to choose a chat.
+* Telegram sends messages to the webhook URL.
+* Laravel receives the payload.
+* If the message text is `hi`, the bot replies with `hello`.
+* All requests are logged and acknowledged.
 
 ---
 
-## 9) Sending a Message (Webhook Logic)
+## 9. Test the Bot
 
-Add this to **`routes/web.php`**:
-
-```php
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-
-Route::post('/telegraph/{token}/webhook', function (Request $request, $token) {
-
-    Log::info('Telegram webhook request', $request->all());
-
-    $text   = strtolower($request->input('message.text', ''));
-    $chatId = $request->input('message.chat.id');
-
-    if ($chatId && $text === 'hi') {
-        $bot = resolve('telegraph.bot');
-
-        $bot->sendMessage([
-            'chat_id' => $chatId,
-            'text'    => 'hello',
-        ]);
-    }
-
-    return response()->json(['ok' => true]);
-});
-```
-
-This route:
-
-* logs the incoming webhook payload
-* replies **hello** when user sends **hi**
-* always returns success to Telegram
-
----
-
-## 10) Testing
-
-1. Open your bot in Telegram (use username from BotFather).
+1. Open your bot in Telegram.
 2. Send:
 
-   ```
-   hi
-   ```
-3. Bot should reply:
+```
+hi
+```
 
-   ```
-   hello
-   ```
+3. The bot replies:
+
+```
+hello
+```
 
 ---
 
 ## Debugging
 
-### Check webhook registration
-
-Visit:
+### Check Webhook Status
 
 ```
 https://api.telegram.org/bot<YOUR_TOKEN>/getWebhookInfo
 ```
 
-Example:
-
-```
-https://api.telegram.org/bot123456789:ABCdefGhiJkl_MNOPqrstUVwxyZ/getWebhookInfo
-```
-
-Look for:
-
-* `url` set to your ngrok URL + `/telegraph/<token>/webhook`
-* `last_error_message` empty → good
-
----
-
-### View logs
-
-Tail Laravel logs for webhook hits:
-
-```
-tail -f storage/logs/laravel.log
-```
-
-You should see entries like:
-
-```
-Telegram webhook request
-```
-
-with the JSON payload.
+Confirm the webhook URL is set and no errors are shown.
 
 ---
 
 ## Notes
 
-* If you restart ngrok, your HTTPS URL changes — re-run:
+* Restarting ngrok changes the HTTPS URL.
+* After restarting ngrok, re-run:
 
-  ```
-  php artisan telegraph:set-webhook {bot_id}
-  ```
-* CSRF must be excluded for webhook POSTs.
-* The webhook route used by Telegraph is:
+```bash
+php artisan telegraph:set-webhook {bot_id}
+```
 
-  ```
-  POST /telegraph/{token}/webhook
-  ```
+* The default Telegraph webhook route is:
 
----
+```
+POST /telegraph/{token}/webhook
+```
+
